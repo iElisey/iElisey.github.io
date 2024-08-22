@@ -1,151 +1,143 @@
 <template>
   <v-container>
-    <v-row class="text-center">
-      <v-col cols="12">
+    <!-- Вступительное фото -->
+    <h2 class="text-center mb-2">Hamster Kombat Free Keys 🔑</h2>
+    <v-row class="text-center justify-center">
+      <v-col cols="12" class="d-flex justify-center">
         <v-img
-          :src="require('../assets/logo.svg')"
-          class="my-3"
-          contain
-          height="200"
-        />
-      </v-col>
-
-      <v-col class="mb-4">
-        <h1 class="display-2 font-weight-bold mb-3">
-          Welcome to Vuetify
-        </h1>
-
-        <p class="subheading font-weight-regular">
-          For help and collaboration with other Vuetify developers,
-          <br>please join our online
-          <a
-            href="https://community.vuetifyjs.com"
-            target="_blank"
-          >Discord Community</a>
-        </p>
-      </v-col>
-
-      <v-col
-        class="mb-5"
-        cols="12"
-      >
-        <h2 class="headline font-weight-bold mb-3">
-          What's next?
-        </h2>
-
-        <v-row justify="center">
-          <a
-            v-for="(next, i) in whatsNext"
-            :key="i"
-            :href="next.href"
-            class="subheading mx-3"
-            target="_blank"
-          >
-            {{ next.text }}
-          </a>
-        </v-row>
-      </v-col>
-
-      <v-col
-        class="mb-5"
-        cols="12"
-      >
-        <h2 class="headline font-weight-bold mb-3">
-          Important Links
-        </h2>
-
-        <v-row justify="center">
-          <a
-            v-for="(link, i) in importantLinks"
-            :key="i"
-            :href="link.href"
-            class="subheading mx-3"
-            target="_blank"
-          >
-            {{ link.text }}
-          </a>
-        </v-row>
-      </v-col>
-
-      <v-col
-        class="mb-5"
-        cols="12"
-      >
-        <h2 class="headline font-weight-bold mb-3">
-          Ecosystem
-        </h2>
-
-        <v-row justify="center">
-          <a
-            v-for="(eco, i) in ecosystem"
-            :key="i"
-            :href="eco.href"
-            class="subheading mx-3"
-            target="_blank"
-          >
-            {{ eco.text }}
-          </a>
-        </v-row>
+            src="@/assets/logo.jpg"
+            alt="Intro Logo"
+            class="intro-image"
+            contain
+        ></v-img>
       </v-col>
     </v-row>
+    <v-row class="text-center">
+      <v-col>
+        <v-btn :loading="loading" :disabled="loading" color="primary" @click="getKeys">Get All keys</v-btn>
+      </v-col>
+    </v-row>
+    <v-row class="text-center justify-center">
+      <v-col>
+        <v-card class="text-center">
+          <v-card-title class="d-flex justify-space-between align-center justify-center">
+            <h5 class="text-h5" v-if="!keys.length">Your keys will be here.</h5>
+            <v-btn
+                v-if="keys.length"
+                @click="copyAllKeys"
+                color="secondary"
+                class="ml-2"
+            >
+              Copy All Keys
+            </v-btn>
+          </v-card-title>
+          <v-card-text>
+            <v-row>
+              <v-col v-if="!keys.length"></v-col>
+              <v-col
+                  v-for="(group, prefix) in groupedKeys"
+                  :key="prefix"
+                  :cols="getColSize"
+                  class="mb-2 d-flex flex-column"
+              >
+                <div v-for="(code, index) in group" :key="index"
+                     @click="copyKey(`${code.prefix}-${code.keyValue}`)"
+                     class="key-item text--black">
+                  {{ code.prefix }}-{{ code.keyValue }}
+                </div>
+              </v-col>
+            </v-row>
+            <!-- Snackbar for copy confirmation -->
+            <v-snackbar
+                v-model="snackbar"
+                timeout="2000"
+                color="success"
+            >
+              Key copied to clipboard!
+            </v-snackbar>
+          </v-card-text>
+
+        </v-card>
+      </v-col>
+    </v-row>
+
   </v-container>
 </template>
 
 <script>
-  export default {
-    name: 'HelloWorld',
+import KeysService from "@/components/service/keys.service";
 
-    data: () => ({
-      ecosystem: [
-        {
-          text: 'vuetify-loader',
-          href: 'https://github.com/vuetifyjs/vuetify-loader',
-        },
-        {
-          text: 'github',
-          href: 'https://github.com/vuetifyjs/vuetify',
-        },
-        {
-          text: 'awesome-vuetify',
-          href: 'https://github.com/vuetifyjs/awesome-vuetify',
-        },
-      ],
-      importantLinks: [
-        {
-          text: 'Documentation',
-          href: 'https://vuetifyjs.com',
-        },
-        {
-          text: 'Chat',
-          href: 'https://community.vuetifyjs.com',
-        },
-        {
-          text: 'Made with Vuetify',
-          href: 'https://madewithvuejs.com/vuetify',
-        },
-        {
-          text: 'Twitter',
-          href: 'https://twitter.com/vuetifyjs',
-        },
-        {
-          text: 'Articles',
-          href: 'https://medium.com/vuetify',
-        },
-      ],
-      whatsNext: [
-        {
-          text: 'Explore components',
-          href: 'https://vuetifyjs.com/components/api-explorer',
-        },
-        {
-          text: 'Select a layout',
-          href: 'https://vuetifyjs.com/getting-started/pre-made-layouts',
-        },
-        {
-          text: 'Frequently Asked Questions',
-          href: 'https://vuetifyjs.com/getting-started/frequently-asked-questions',
-        },
-      ],
-    }),
+export default {
+  name: 'HamsterKeys',
+  data: () => ({
+    keys: [],
+    loading: false, // Управление состоянием загрузки
+
+    snackbar: false, // For showing the copy notification
+
+  }),
+  computed: {
+    groupedKeys() {
+      return this.keys.reduce((groups, key) => {
+        if (!groups[key.prefix]) {
+          groups[key.prefix] = [];
+        }
+        groups[key.prefix].push(key);
+        return groups;
+      }, {});
+    },
+    getColSize() {
+      // Определяем количество колонок в зависимости от размера экрана
+      if (this.$vuetify.breakpoint.xs) return 12; // Для мобильных устройств
+      if (this.$vuetify.breakpoint.sm) return 6;  // Для планшетов
+      if (this.$vuetify.breakpoint.md) return 4;  // Для ноутбуков
+      if (this.$vuetify.breakpoint.lg) return 3;  // Для ПК
+      return 2; // Для больших экранов
+    },
+  },
+  methods: {
+    copyAllKeys() {
+      const allKeys = this.keys.map(code => `${code.prefix}-${code.keyValue}`).join('\n');
+      navigator.clipboard.writeText(allKeys).then(() => {
+        this.snackbar = true;
+      });
+    },
+    copyKey(key) {
+      navigator.clipboard.writeText(key).then(() => {
+        this.snackbar = true; // Show the snackbar when copied
+      });
+    },
+    async getKeys() {
+      this.loading=true
+      await KeysService.getKeys().then((response => {
+        this.keys = response.data;
+        this.loading = false
+      }));
+      this.loading=false
+
+    },
   }
+}
 </script>
+<style scoped>
+.key-item {
+  cursor: pointer;
+  padding: 8px;
+  background-color: #f5f5f5;
+  margin: 4px 0;
+  border-radius: 4px;
+  white-space: nowrap; /* Отключаем перенос текста */
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.intro-image {
+  max-width: 100%; /* Не больше ширины контейнера */
+  height: auto; /* Высота автоматически подстраивается */
+  border-radius: 50px; /* Закругленные углы */
+  max-height: 200px; /* Максимальная высота */
+  object-fit: contain; /* Сохранение пропорций изображения */
+}
+.key-item:hover {
+  background-color: #e0e0e0;
+}
+</style>
